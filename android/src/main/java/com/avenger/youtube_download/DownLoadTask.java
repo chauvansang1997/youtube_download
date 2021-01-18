@@ -3,6 +3,8 @@ package com.avenger.youtube_download;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
@@ -28,13 +30,18 @@ public class DownLoadTask {
     private final CompositeDisposable compositeDisposable;
     private final DownLoadListener downLoadListener;
     private final Activity activity;
-    private final String taskId;
+    public final String taskId;
+    private boolean isUpdate;
 
     DownLoadTask(Activity activity, DownLoadListener downLoadListener) {
         this.activity = activity;
         this.downLoadListener = downLoadListener;
         taskId = UUID.randomUUID().toString();
         compositeDisposable = new CompositeDisposable();
+
+        SharedPreferences sharedPref = this.activity.getPreferences(this.activity.MODE_PRIVATE);
+        isUpdate = sharedPref.getBoolean("youtube_download_update", false);
+        sharedPref.edit().putBoolean("youtube_download_update", true);
     }
 
     private DownloadProgressCallback callback = new DownloadProgressCallback() {
@@ -93,9 +100,83 @@ public class DownLoadTask {
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(youtubeDLResponse -> {
+
                     downLoadListener.onSuccess(taskId);
                 }, e -> {
                     downLoadListener.onError(taskId, e.toString());
+                });
+        compositeDisposable.add(disposable);
+    }
+
+    public void updateAndDownload(String url) {
+        if (!isUpdate) {
+
+            if (!isStoragePermissionGranted()) {
+                return;
+            }
+
+            Disposable disposable = Observable.fromCallable(() -> YoutubeDL.getInstance().updateYoutubeDL(
+                    activity))
+                    .subscribeOn(Schedulers.newThread())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(status -> {
+                        switch (status) {
+                            case DONE:
+                            case ALREADY_UP_TO_DATE:
+                                startDownload(url);
+                                SharedPreferences sharedPref = this.activity.getPreferences(Context.MODE_PRIVATE);
+                                SharedPreferences.Editor editor = sharedPref.edit();
+                                editor.putBoolean("youtube_download_update", true);
+                                editor.apply();
+                                isUpdate = true;
+                                break;
+                            default:
+                                break;
+                        }
+
+                    }, e -> {
+                        if (downLoadListener != null) {
+                            downLoadListener.onUpdateError(e.toString());
+                        }
+                        startDownload(url);
+                    });
+            compositeDisposable.add(disposable);
+        } else {
+            startDownload(url);
+        }
+    }
+
+    public void update() {
+        Disposable disposable = Observable.fromCallable(() -> YoutubeDL.getInstance().updateYoutubeDL(
+                activity))
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(status -> {
+                    switch (status) {
+                        case DONE:
+                            if (downLoadListener != null) {
+                                downLoadListener.onUpdateSuccess();
+                            }
+                            SharedPreferences sharedPref = this.activity.getPreferences(Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPref.edit();
+                            editor.putBoolean("youtube_download_update", true);
+                            editor.apply();
+                            isUpdate = true;
+                            break;
+                        case ALREADY_UP_TO_DATE:
+                            if (downLoadListener != null) {
+                                downLoadListener.onAlreadyUpdate();
+                            }
+                            break;
+                        default:
+
+                            break;
+                    }
+
+                }, e -> {
+                    if (downLoadListener != null) {
+                        downLoadListener.onUpdateError(e.toString());
+                    }
                 });
         compositeDisposable.add(disposable);
     }

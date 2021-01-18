@@ -11,6 +11,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
+import com.yausername.ffmpeg.FFmpeg;
 import com.yausername.youtubedl_android.DownloadProgressCallback;
 import com.yausername.youtubedl_android.YoutubeDL;
 import com.yausername.youtubedl_android.YoutubeDLException;
@@ -57,11 +58,7 @@ public class YoutubeDownloadPlugin implements FlutterPlugin, MethodCallHandler, 
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "youtube_download");
         channel.setMethodCallHandler(this);
-        try {
-            YoutubeDL.getInstance().init(activity);
-        } catch (YoutubeDLException e) {
-            Log.e(TAG, "failed to initialize youtubedl-android", e);
-        }
+
     }
 
 
@@ -73,7 +70,7 @@ public class YoutubeDownloadPlugin implements FlutterPlugin, MethodCallHandler, 
 
                 @Override
                 public void onSuccess(String taskId) {
-                    channel.invokeMethod("youtube.success", taskId);
+                    channel.invokeMethod("youtube.download_success", taskId);
                 }
 
                 @Override
@@ -83,7 +80,7 @@ public class YoutubeDownloadPlugin implements FlutterPlugin, MethodCallHandler, 
                         json.put("taskId", taskId);
                         json.put("progress", progress);
                         json.put("total", total);
-                        channel.invokeMethod("youtube.progress", json.toString());
+                        channel.invokeMethod("youtube.download_progress", json.toString());
                     } catch (JSONException e) {
                         channel.invokeMethod("youtube.json_error", taskId);
                     }
@@ -96,15 +93,30 @@ public class YoutubeDownloadPlugin implements FlutterPlugin, MethodCallHandler, 
                         JSONObject json = new JSONObject();
                         json.put("taskId", taskId);
                         json.put("error", message);
-                        channel.invokeMethod("youtube.error", json.toString());
+                        channel.invokeMethod("youtube.download_error", json.toString());
                     } catch (JSONException e) {
                         channel.invokeMethod("youtube.json_error", taskId);
                     }
 
                 }
+
+                @Override
+                public void onUpdateSuccess() {
+                    channel.invokeMethod("youtube.update_success", "Update success");
+                }
+
+                @Override
+                public void onUpdateError(String error) {
+                    channel.invokeMethod("youtube.update_error", error);
+                }
+
+                @Override
+                public void onAlreadyUpdate() {
+                    channel.invokeMethod("youtube.already_update", "Already update");
+                }
             });
-            downLoadTask.startDownload(url);
-            //  result.success("Android " + android.os.Build.VERSION.RELEASE);
+            downLoadTask.updateAndDownload(url);
+            result.success(downLoadTask.taskId);
         } else {
             result.notImplemented();
         }
@@ -118,6 +130,12 @@ public class YoutubeDownloadPlugin implements FlutterPlugin, MethodCallHandler, 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
         activity = binding.getActivity();
+        try {
+            YoutubeDL.getInstance().init(activity);
+            FFmpeg.getInstance().init(activity);
+        } catch (YoutubeDLException e) {
+            Log.e(TAG, "failed to initialize youtubedl-android", e);
+        }
     }
 
     @Override
@@ -128,6 +146,12 @@ public class YoutubeDownloadPlugin implements FlutterPlugin, MethodCallHandler, 
     @Override
     public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
         activity = binding.getActivity();
+        try {
+            YoutubeDL.getInstance().init(activity);
+            FFmpeg.getInstance().init(activity);
+        } catch (YoutubeDLException e) {
+            Log.e(TAG, "failed to initialize youtubedl-android", e);
+        }
     }
 
     @Override

@@ -9,5 +9,10 @@ public interface DownLoadListener {
     
     void onError(String taskId, String message);
     
-    
+    void onUpdateSuccess();
+
+    void onUpdateError( String error);
+
+    void onAlreadyUpdate();
+
 }

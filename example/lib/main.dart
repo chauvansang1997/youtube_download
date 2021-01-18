@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:youtube_download/youtube_download.dart';
 
 void main() {
@@ -14,43 +13,73 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: ExamplePage(),
+    );
+  }
+}
+
+class ExamplePage extends StatefulWidget {
+  @override
+  _ExamplePageState createState() => _ExamplePageState();
+}
+
+class _ExamplePageState extends State<ExamplePage> {
+  YoutubeDownload _youtubeDownload;
+  StreamSubscription _downloadProgressSubscription;
+  final TextEditingController _textEditingController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      platformVersion = await YoutubeDownload.platformVersion;
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
+    _textEditingController.text = 'https://www.youtube.com/watch?v=qBwAeqlJEeU';
+    _youtubeDownload = YoutubeDownload();
+    _youtubeDownload.downloadErrorStream.listen((event) {
+      ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      print(event.error);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Downloading task ${event.taskId} failed with error: ${event.error}'),
+      ));
+    });
+    _downloadProgressSubscription =
+        _youtubeDownload.downloadProgressStream.listen((event) {
+      ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Downloading task ${event.taskId} ${event.progress * 1.0 / event.total}%'),
+      ));
     });
   }
 
   @override
+  void dispose() {
+    _downloadProgressSubscription.cancel();
+    _textEditingController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Download youtube example app'),
+      ),
+      body: Center(
+        child: Column(
+          children: [
+            TextField(
+              controller: _textEditingController,
+            ),
+            FlatButton(
+              child: Text('Download'),
+              onPressed: () {
+                _youtubeDownload.downloadUrl(url: _textEditingController.text);
+              },
+            )
+          ],
         ),
       ),
     );
