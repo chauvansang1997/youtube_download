@@ -1,7 +1,3 @@
-include ':app:mylibrary'
-include ':youtube_download:mylibrary2'
-include ':youtube_download:mylibrary'
-include ':youtube_download:ffmpeg'
 include ':app'
 
 def localPropertiesFile = new File(rootProject.projectDir, "local.properties")

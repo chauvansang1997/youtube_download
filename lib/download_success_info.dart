@@ -1,11 +1,11 @@
 class DownloadSuccessInfo {
   String taskId;
   int progress;
-  int total;
+  int totalSeconds;
 
   DownloadSuccessInfo.fromJson(Map<String, dynamic> json){
     taskId = json['taskId'];
     progress = json['progress'];
-    total = json['total'];
+    totalSeconds = json['total'];
   }
 }

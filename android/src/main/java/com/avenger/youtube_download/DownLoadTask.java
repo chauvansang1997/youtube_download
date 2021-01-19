@@ -1,4 +1,3 @@
-
 package com.avenger.youtube_download;
 
 import android.Manifest;
@@ -27,23 +26,11 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
 public class DownLoadTask {
+    public final String taskId;
     private final CompositeDisposable compositeDisposable;
     private final DownLoadListener downLoadListener;
     private final Activity activity;
-    public final String taskId;
     private boolean isUpdate;
-
-    DownLoadTask(Activity activity, DownLoadListener downLoadListener) {
-        this.activity = activity;
-        this.downLoadListener = downLoadListener;
-        taskId = UUID.randomUUID().toString();
-        compositeDisposable = new CompositeDisposable();
-
-        SharedPreferences sharedPref = this.activity.getPreferences(this.activity.MODE_PRIVATE);
-        isUpdate = sharedPref.getBoolean("youtube_download_update", false);
-        sharedPref.edit().putBoolean("youtube_download_update", true);
-    }
-
     private DownloadProgressCallback callback = new DownloadProgressCallback() {
         @Override
         public void onProgressUpdate(float progress, long etaInSeconds) {
@@ -57,6 +44,16 @@ public class DownLoadTask {
         }
     };
 
+    DownLoadTask(Activity activity, DownLoadListener downLoadListener) {
+        this.activity = activity;
+        this.downLoadListener = downLoadListener;
+        taskId = UUID.randomUUID().toString();
+        compositeDisposable = new CompositeDisposable();
+
+        SharedPreferences sharedPref = this.activity.getPreferences(this.activity.MODE_PRIVATE);
+        isUpdate = sharedPref.getBoolean("youtube_download_update", false);
+        sharedPref.edit().putBoolean("youtube_download_update", true);
+    }
 
     public boolean isStoragePermissionGranted() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -95,6 +92,7 @@ public class DownLoadTask {
         YoutubeDLRequest request = new YoutubeDLRequest(url);
         File youtubeDLDir = getDownloadLocation();
         request.addOption("-o", youtubeDLDir.getAbsolutePath() + "/%(title)s.%(ext)s");
+//        request.addOption("-F", youtubeDLDir.getAbsolutePath() + "/%(title)s.%(ext)s");
 
         Disposable disposable = Observable.fromCallable(() -> YoutubeDL.getInstance().execute(request, callback))
                 .subscribeOn(Schedulers.newThread())
@@ -122,17 +120,18 @@ public class DownLoadTask {
                     .subscribe(status -> {
                         switch (status) {
                             case DONE:
-                            case ALREADY_UP_TO_DATE:
-                                startDownload(url);
+                                isUpdate = true;
                                 SharedPreferences sharedPref = this.activity.getPreferences(Context.MODE_PRIVATE);
                                 SharedPreferences.Editor editor = sharedPref.edit();
                                 editor.putBoolean("youtube_download_update", true);
                                 editor.apply();
+                            case ALREADY_UP_TO_DATE:
                                 isUpdate = true;
                                 break;
                             default:
                                 break;
                         }
+                        startDownload(url);
 
                     }, e -> {
                         if (downLoadListener != null) {
