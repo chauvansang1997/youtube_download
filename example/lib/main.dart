@@ -31,6 +31,7 @@ class _ExamplePageState extends State<ExamplePage> {
   StreamSubscription _downloadProgressSubscription;
   final TextEditingController _textEditingController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -39,31 +40,30 @@ class _ExamplePageState extends State<ExamplePage> {
     _youtubeDownload.downloadErrorStream.listen((event) {
       _scaffoldKey.currentState.removeCurrentSnackBar();
       // ScaffoldMessenger.of(context).removeCurrentSnackBar();
-      print(event.error);
       // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       //   content: Text(
       //       'Downloading task ${event.taskId} failed with error: ${event.error}'),
       // ));
       _scaffoldKey.currentState.showSnackBar(SnackBar(
-        content: Text(
-            'Downloading task ${event.taskId} failed with error: ${event.error}'),
+        content: Text('Downloading task ${event.taskId} failed with error: ${event.error}'),
       ));
     });
-    _downloadProgressSubscription =
-        _youtubeDownload.downloadProgressStream.listen((event) {
-          _scaffoldKey.currentState.removeCurrentSnackBar();
+    _downloadProgressSubscription = _youtubeDownload.downloadProgressStream.listen((event) {
+      _scaffoldKey.currentState.removeCurrentSnackBar();
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content: Text('Downloading task ${event.taskId} ${event.progress}%'),
+      ));
+    });
+    _youtubeDownload.downloadSuccessStream.listen((event) {
+      _scaffoldKey.currentState.removeCurrentSnackBar();
       // ScaffoldMessenger.of(context).removeCurrentSnackBar();
       // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       //   content: Text(
       //       'Downloading task ${event.taskId} ${event.progress * 1.0 / event.total}%'),
       // ));
       _scaffoldKey.currentState.showSnackBar(SnackBar(
-            content: Text(
-                'Downloading task ${event.taskId} ${event.progress}%'),
-          ));
-    });
-    _youtubeDownload.downloadSuccessStream.listen((event) {
-
+        content: Text('Download success'),
+      ));
     });
   }
 
